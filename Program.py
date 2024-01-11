@@ -1,43 +1,33 @@
-import tensorflow as tf
-from tensorflow.keras import datasets, layers, models
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import accuracy_score, precision_score, confusion_matrix
 import numpy as np
-import json
+from sklearn.model_selection import train_test_split
+from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score, precision_score, confusion_matrix
+from skimage.feature import hog
+from mlxtend.data import loadlocal_mnist
 
-(x_train, y_train), (x_test, y_test) = datasets.mnist.load_data()
+images, labels = loadlocal_mnist(
+    images_path='images/mnist-dataset/train-images-idx3-ubyte',
+    labels_path='images/mnist-dataset/train-labels-idx1-ubyte'
+)
 
-x_train, x_test = x_train / 255.0, x_test / 255.0
+hog_features = [
+    hog(image.reshape((28, 28)), orientations=8, pixels_per_cell=(4, 4), cells_per_block=(1, 1), visualize=True)[0]
+    for image in images[:100]
+]
 
-X_train, X_val, y_train, y_val = train_test_split(x_train, y_train, test_size=0.2, random_state=42)
 
-model = models.Sequential()
-model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=(28, 28, 1)))
-model.add(layers.MaxPooling2D((2, 2)))
-model.add(layers.Conv2D(64, (3, 3), activation='relu'))
-model.add(layers.MaxPooling2D((2, 2)))
-model.add(layers.Conv2D(64, (3, 3), activation='relu'))
-model.add(layers.Flatten())
-model.add(layers.Dense(64, activation='relu'))
-model.add(layers.Dense(10, activation='softmax'))
+hog_features = np.array(hog_features)
 
-X_train = X_train.reshape((-1, 28, 28, 1))
-X_val = X_val.reshape((-1, 28, 28, 1))
-x_test = x_test.reshape((-1, 28, 28, 1))
+X_train, X_test, y_train, y_test = train_test_split(hog_features, labels[:100], test_size=0.2, random_state=42)
 
-model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+svm_classifier = SVC(kernel='linear')
+svm_classifier.fit(X_train, y_train)
+print(hog_features, 'hog features')
 
-model.fit(X_train, y_train, epochs=5, validation_data=(X_val, y_val))
+y_pred = svm_classifier.predict(X_test)
 
-y_pred_probs = model.predict(x_test)
-y_pred = np.argmax(y_pred_probs, axis=1)
-
-accuracy = accuracy_score(y_test, y_pred)
-precision = precision_score(y_test, y_pred, average='weighted')
-conf_matrix = confusion_matrix(y_test, y_pred)
-
-print("Accuracy:", accuracy)
-print("Precision:", precision)
-print("Confusion Matrix:")
-print(conf_matrix)
+akurasi = accuracy_score(y_test, y_pred)
+presisi = precision_score(y_test, y_pred, average='weighted')
+confussio_matrix = confusion_matrix(y_test, y_pred)
+print(akurasi)
+print(confussio_matrix)
